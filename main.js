@@ -4,7 +4,7 @@ function createWindow () {
   const primaryDisplay = screen.getPrimaryDisplay()
   const screenHeight = primaryDisplay.size.height
   
-  const overlayWidth = 260
+  const overlayWidth = 380
   const windowHeight = 420 // Chiều cao cố định (bao gồm bar 40px và popup)
 
   const win = new BrowserWindow({

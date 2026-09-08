@@ -35,7 +35,8 @@
         /* Bar chính trên Taskbar (40px ở đáy cửa sổ) */
         .overlay-bar {
             height: 38px;
-            width: 100%;
+            flex: 1;
+            min-width: 0;
             background-color: transparent;
             /* Ngày thường hòa trộn hoàn toàn vào Taskbar */
             color: #111827;
@@ -217,6 +218,134 @@
             line-height: 1.35;
             word-break: break-word;
         }
+
+        /* Chai nước */
+        .taskbar-container {
+            display: flex;
+            align-items: center;
+            width: 100%;
+        }
+
+        .water-bottle-container {
+            display: flex;
+            align-items: center;
+            margin-right: 8px;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+
+        .bottle-body {
+            display: flex;
+            width: 98px;
+            height: 32px;
+            border: 1px solid #94a3b8;
+            border-radius: 5px 0 0 5px;
+            overflow: hidden;
+            background: #ffffff;
+        }
+
+        .bottle-cap {
+            width: 5px;
+            height: 18px;
+            background: #94a3b8;
+            border-radius: 0 4px 4px 0;
+            margin-left: 1px;
+        }
+
+        .water-segment {
+            flex: 1;
+            min-width: 0;
+            border-right: 1px solid #e2e8f0;
+            background-color: #ffffff;
+            transition: background-color 0.2s, color 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 8.5px;
+            font-weight: 600;
+            color: #64748b;
+        }
+
+        .water-segment span {
+            transform: rotate(-90deg);
+            white-space: nowrap;
+        }
+
+        .water-segment:last-child {
+            border-right: none;
+        }
+
+        .water-segment.drank {
+            background-color: #3b82f6;
+            color: #ffffff;
+        }
+
+        .water-segment.missed {
+            animation: blinkRed 1s infinite;
+        }
+
+        @keyframes blinkRed {
+
+            0%,
+            100% {
+                background-color: #ef4444;
+                color: #ffffff;
+            }
+
+            50% {
+                background-color: #fca5a5;
+                color: #ffffff;
+            }
+        }
+
+        /* Vỉ thuốc */
+        .pill-container {
+            display: flex;
+            align-items: center;
+            margin-right: 8px;
+            cursor: pointer;
+            flex-shrink: 0;
+            gap: 4px;
+        }
+
+        .pill-item {
+            width: 24px;
+            height: 16px;
+            border-radius: 8px;
+            background-color: #f1f5f9;
+            border: 1px solid #cbd5e1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 8.5px;
+            font-weight: 700;
+            color: #64748b;
+            transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+            position: relative;
+        }
+
+        .pill-item.taken {
+            background-color: #10b981;
+            color: #ffffff;
+            border-color: #059669;
+        }
+
+        .pill-item.missed {
+            animation: blinkRedPill 1s infinite;
+        }
+
+        @keyframes blinkRedPill {
+            0%, 100% {
+                background-color: #ef4444;
+                color: #ffffff;
+                border-color: #dc2626;
+            }
+            50% {
+                background-color: #fca5a5;
+                color: #ffffff;
+                border-color: #f87171;
+            }
+        }
     </style>
 </head>
 
@@ -273,13 +402,76 @@
         </div>
 
         <!-- Bar trên Taskbar -->
-        <div class="overlay-bar" id="bar">
-            <div class="bar-primary" id="bar-date">Âm Lịch: Đang tải...</div>
-            <div class="bar-status" id="bar-status">Đang kiểm tra...</div>
+        <div class="taskbar-container">
+            <div class="overlay-bar" id="bar">
+                <div class="bar-primary" id="bar-date">Âm Lịch: Đang tải...</div>
+                <div class="bar-status" id="bar-status">Đang kiểm tra...</div>
+            </div>
+
+            <div class="water-bottle-container" title="Uống nước (8:30 - 17:00)">
+                <div class="bottle-body">
+                    <div class="water-segment" data-index="0" title="Đến 8:30"><span>8:30</span></div>
+                    <div class="water-segment" data-index="1" title="Đến 9:30"><span>9:30</span></div>
+                    <div class="water-segment" data-index="2" title="Đến 10:30"><span>10:30</span></div>
+                    <div class="water-segment" data-index="3" title="Đến 14:00"><span>14:00</span></div>
+                    <div class="water-segment" data-index="4" title="Đến 15:00"><span>15:00</span></div>
+                    <div class="water-segment" data-index="5" title="Đến 16:00"><span>16:00</span></div>
+                    <div class="water-segment" data-index="6" title="Đến 17:00"><span>17:00</span></div>
+                </div>
+                <div class="bottle-cap"></div>
+            </div>
+
+            <div class="pill-container" title="Lịch uống thuốc">
+                <div class="pill-item" data-index="0" title="9:00 - Vitamin C"><span>9h</span></div>
+                <div class="pill-item" data-index="1" title="14:00 - Kẽm"><span>14h</span></div>
+            </div>
         </div>
     </div>
 
     <script>
+        const fs = require('fs');
+        const path = require('path');
+        const WATER_FILE_PATH = path.join(__dirname, 'water_data.json');
+        const PILL_FILE_PATH = path.join(__dirname, 'pill_data.json');
+
+        function getPillData() {
+            try {
+                if (fs.existsSync(PILL_FILE_PATH)) {
+                    return JSON.parse(fs.readFileSync(PILL_FILE_PATH, 'utf8'));
+                }
+            } catch (e) {
+                console.error('Lỗi đọc file', e);
+            }
+            return null;
+        }
+
+        function savePillData(data) {
+            try {
+                fs.writeFileSync(PILL_FILE_PATH, JSON.stringify(data, null, 4), 'utf8');
+            } catch (e) {
+                console.error('Lỗi ghi file', e);
+            }
+        }
+
+        function getWaterData() {
+            try {
+                if (fs.existsSync(WATER_FILE_PATH)) {
+                    return JSON.parse(fs.readFileSync(WATER_FILE_PATH, 'utf8'));
+                }
+            } catch (e) {
+                console.error('Lỗi đọc file', e);
+            }
+            return null;
+        }
+
+        function saveWaterData(data) {
+            try {
+                fs.writeFileSync(WATER_FILE_PATH, JSON.stringify(data, null, 4), 'utf8');
+            } catch (e) {
+                console.error('Lỗi ghi file', e);
+            }
+        }
+
         // =========================================================================
         // CẤU HÌNH NGÀY SINH GIA CHỦ (Set cứng trong code - Định dạng: YYYY-MM-DD)
         // =========================================================================
@@ -627,9 +819,128 @@
             }
         }
 
+        const WATER_DEADLINES = [
+            { hour: 8, min: 30 },
+            { hour: 9, min: 30 },
+            { hour: 10, min: 30 },
+            { hour: 14, min: 0 },
+            { hour: 15, min: 0 },
+            { hour: 16, min: 0 },
+            { hour: 17, min: 0 }
+        ];
+
+        function checkWaterStatus() {
+            const now = new Date();
+            const currentTotalMin = now.getHours() * 60 + now.getMinutes();
+
+            const todayStr = now.getFullYear() + '-' + (now.getMonth() + 1) + '-' + now.getDate();
+            const savedData = getWaterData();
+            let waterState = [false, false, false, false, false, false, false];
+
+            if (savedData && savedData.date === todayStr && Array.isArray(savedData.state) && savedData.state.length === 7) {
+                waterState = savedData.state;
+            } else {
+                saveWaterData({ date: todayStr, state: waterState });
+            }
+
+            const segments = document.querySelectorAll('.water-segment');
+            segments.forEach((seg, index) => {
+                const deadline = WATER_DEADLINES[index];
+                const deadlineTotalMin = deadline.hour * 60 + deadline.min;
+
+                seg.classList.remove('drank', 'missed');
+
+                if (waterState[index]) {
+                    seg.classList.add('drank');
+                } else if (currentTotalMin >= deadlineTotalMin) {
+                    seg.classList.add('missed');
+                }
+            });
+        }
+
+        function initWaterBottle() {
+            checkWaterStatus();
+
+            const segments = document.querySelectorAll('.water-segment');
+            segments.forEach((seg, index) => {
+                seg.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const now = new Date();
+                    const todayStr = now.getFullYear() + '-' + (now.getMonth() + 1) + '-' + now.getDate();
+
+                    const savedData = getWaterData();
+                    let waterState = [false, false, false, false, false, false, false];
+                    if (savedData && savedData.date === todayStr && Array.isArray(savedData.state) && savedData.state.length === 7) {
+                        waterState = savedData.state;
+                    }
+
+                    waterState[index] = !waterState[index];
+                    saveWaterData({ date: todayStr, state: waterState });
+
+                    checkWaterStatus();
+                });
+            });
+
+            setInterval(checkWaterStatus, 60000);
+        }
+
+        const PILL_DEADLINES = [
+            { hour: 9, min: 0 },
+            { hour: 14, min: 0 }
+        ];
+
+        function checkPillStatus() {
+            const now = new Date();
+            const currentTotalMin = now.getHours() * 60 + now.getMinutes();
+            const todayStr = now.getFullYear() + '-' + (now.getMonth() + 1) + '-' + now.getDate();
+            const savedData = getPillData();
+            let pillState = [false, false];
+
+            if (savedData && savedData.date === todayStr && Array.isArray(savedData.state) && savedData.state.length === 2) {
+                pillState = savedData.state;
+            } else {
+                savePillData({ date: todayStr, state: pillState });
+            }
+
+            const segments = document.querySelectorAll('.pill-item');
+            segments.forEach((seg, index) => {
+                const deadline = PILL_DEADLINES[index];
+                const deadlineTotalMin = deadline.hour * 60 + deadline.min;
+                seg.classList.remove('taken', 'missed');
+                if (pillState[index]) {
+                    seg.classList.add('taken');
+                } else if (currentTotalMin >= deadlineTotalMin) {
+                    seg.classList.add('missed');
+                }
+            });
+        }
+
+        function initPillBottle() {
+            checkPillStatus();
+            const segments = document.querySelectorAll('.pill-item');
+            segments.forEach((seg, index) => {
+                seg.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const now = new Date();
+                    const todayStr = now.getFullYear() + '-' + (now.getMonth() + 1) + '-' + now.getDate();
+                    const savedData = getPillData();
+                    let pillState = [false, false];
+                    if (savedData && savedData.date === todayStr && Array.isArray(savedData.state) && savedData.state.length === 2) {
+                        pillState = savedData.state;
+                    }
+                    pillState[index] = !pillState[index];
+                    savePillData({ date: todayStr, state: pillState });
+                    checkPillStatus();
+                });
+            });
+            setInterval(checkPillStatus, 60000);
+        }
+
         // Khởi chạy
         updateFengShuiData();
         setInterval(updateFengShuiData, 60000);
+        initWaterBottle();
+        initPillBottle();
     </script>
 </body>
 
