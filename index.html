@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>Taskbar Overlay - Tử Vi Phong Thủy</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: transparent;
+            user-select: none;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        .wrapper {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            position: relative;
+            padding-bottom: 6px;
+            /* Đẩy thanh tab lên cao 6px khỏi dính đáy */
+        }
+
+        /* Bar chính trên Taskbar (40px ở đáy cửa sổ) */
+        .overlay-bar {
+            height: 38px;
+            width: 100%;
+            background-color: transparent;
+            /* Ngày thường hòa trộn hoàn toàn vào Taskbar */
+            color: #111827;
+            /* Chữ ngày thường màu ĐEN */
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            /* Căn sát hẳn sang lề bên trái */
+            justify-content: center;
+            cursor: pointer;
+            line-height: 1.25;
+            white-space: nowrap;
+            padding: 2px 4px 2px 4px;
+            /* Sát sang lề trái góc màn hình */
+            border-radius: 4px;
+        }
+
+        .bar-primary {
+            font-size: 12.5px;
+            font-weight: 400;
+            /* Ngày thường KHÔNG IN ĐẬM */
+            color: #111827;
+            /* Màu ĐEN */
+            margin: 0;
+            padding: 0;
+        }
+
+        .bar-status {
+            font-size: 11px;
+            font-weight: 500;
+            margin-top: 1px;
+        }
+
+        .status-good {
+            color: #059669;
+            /* Màu XANH LÁ cho ngày Hoàng Đạo */
+        }
+
+        .status-bad {
+            color: #dc2626;
+            /* Màu ĐỎ cho ngày Hắc Đạo */
+        }
+
+        /* Nền màu vàng đậm sang trọng cho Mùng 1 / Ngày Rằm */
+        .overlay-bar.is-special-day {
+            background: linear-gradient(135deg, #d97706, #b45309);
+            border-radius: 4px;
+            color: #ffffff;
+        }
+
+        .overlay-bar.is-special-day .bar-primary {
+            color: #ffffff;
+            font-weight: 600;
+        }
+
+        .overlay-bar.is-special-day .bar-status.status-good {
+            color: #fef08a;
+            /* Vàng tươi trên nền vàng đậm */
+            font-weight: 600;
+        }
+
+        .overlay-bar.is-special-day .bar-status.status-bad {
+            color: #fee2e2;
+            font-weight: 600;
+        }
+
+        /* Popup Chi tiết khi Hover (Có Scroll mượt) */
+        .detail-popup {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+            transform: translateY(8px);
+            transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s;
+
+            width: 100%;
+            max-height: 360px;
+            overflow-y: auto;
+            /* Kích hoạt Scrollbar khi nội dung dài */
+            background: #ffffff;
+            border-radius: 8px;
+            padding: 10px 12px;
+            margin-bottom: 6px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(0, 0, 0, 0.12);
+        }
+
+        /* Tùy chỉnh thanh Scrollbar cho Popup */
+        .detail-popup::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .detail-popup::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 4px;
+        }
+
+        .detail-popup::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+
+        .detail-popup::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        /* Hover hiển thị Popup mượt mà không cần gọi IPC window resize */
+        .wrapper:hover .detail-popup {
+            opacity: 1;
+            visibility: visible;
+            pointer-events: auto;
+            transform: translateY(0);
+        }
+
+        .popup-title {
+            font-size: 12.5px;
+            font-weight: 700;
+            color: #111827;
+            border-bottom: 1px solid #e5e7eb;
+            padding-bottom: 4px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .popup-section {
+            margin-bottom: 7px;
+        }
+
+        .popup-section:last-child {
+            margin-bottom: 0;
+        }
+
+        .section-label {
+            font-size: 11px;
+            font-weight: 700;
+            color: #4b5563;
+            margin-bottom: 2px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .section-desc {
+            font-size: 11px;
+            color: #1f2937;
+            line-height: 1.35;
+            background: #f8fafc;
+            padding: 4px 6px;
+            border-radius: 4px;
+            border-left: 3px solid #3b82f6;
+        }
+
+        .section-desc.good {
+            border-left-color: #10b981;
+            background: #f0fdf4;
+        }
+
+        .section-desc.bad {
+            border-left-color: #ef4444;
+            background: #fef2f2;
+        }
+
+        .section-desc.purple {
+            border-left-color: #8b5cf6;
+            background: #f5f3ff;
+            color: #4c1d95;
+        }
+
+        .section-desc.gold {
+            border-left-color: #d97706;
+            background: #fffbeb;
+            color: #78350f;
+        }
+
+        .hours-list {
+            font-size: 10.5px;
+            color: #374151;
+            line-height: 1.35;
+            word-break: break-word;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="wrapper" id="wrapper">
+        <!-- Popup Chi tiết -->
+        <div class="detail-popup" id="popup">
+            <div class="popup-title">
+                <span>🔮 Tử Vi Phong Thủy Chi Tiết</span>
+                <span style="font-size: 10px; color: #6b7280; font-weight: normal;">Hôm nay</span>
+            </div>
+
+            <!-- Đánh Giá Cá Nhân Theo Ngày Sinh Gia Chủ -->
+            <div class="popup-section">
+                <div class="section-label" style="color: #6d28d9;">👤 Vận Hạn Hôm Nay:</div>
+                <div class="section-desc" id="pop-personal-eval">Đang đánh giá...</div>
+            </div>
+
+            <!-- Ngày Tốt / Xấu (Chung) -->
+            <div class="popup-section">
+                <div class="section-label">☀️ Ngày Tốt / Xấu (Hoàng Đạo):</div>
+                <div class="section-desc" id="pop-day-status">Đang tải...</div>
+            </div>
+
+            <!-- Quẻ Lục Diệu -->
+            <div class="popup-section">
+                <div class="section-label">📜 Quẻ Lục Diệu:</div>
+                <div class="section-desc" id="pop-liuyao">Đang tải...</div>
+            </div>
+
+            <!-- Giờ Hoàng Đạo Hiện Tại -->
+            <div class="popup-section">
+                <div class="section-label">⏰ Giờ Hiện Tại:</div>
+                <div class="section-desc" id="pop-hour">Đang tải...</div>
+            </div>
+
+            <!-- Hướng Xuất Hành -->
+            <div class="popup-section">
+                <div class="section-label">🚩 Hướng Xuất Hành Cát Lành:</div>
+                <div class="section-desc" id="pop-direction">Đang tải...</div>
+            </div>
+
+            <!-- Tuổi Xung Ngày -->
+            <div class="popup-section">
+                <div class="section-label">⚡ Tuổi Xung Ngày:</div>
+                <div class="section-desc bad" id="pop-chong">Đang tải...</div>
+            </div>
+
+            <!-- Tất Cả Giờ Hoàng Đạo -->
+            <div class="popup-section">
+                <div class="section-label">✨ Các Giờ Hoàng Đạo Trong Ngày:</div>
+                <div class="hours-list" id="pop-good-hours">Đang tải...</div>
+            </div>
+        </div>
+
+        <!-- Bar trên Taskbar -->
+        <div class="overlay-bar" id="bar">
+            <div class="bar-primary" id="bar-date">Âm Lịch: Đang tải...</div>
+            <div class="bar-status" id="bar-status">Đang kiểm tra...</div>
+        </div>
+    </div>
+
+    <script>
+        // =========================================================================
+        // CẤU HÌNH NGÀY SINH GIA CHỦ (Set cứng trong code - Định dạng: YYYY-MM-DD)
+        // =========================================================================
+        const USER_BIRTHDATE = '1993-04-10';
+
+        const DIRECTION_MAP = {
+            '乾': 'Tây Bắc', '坤': 'Tây Nam', '艮': 'Đông Bắc', '巽': 'Đông Nam',
+            '震': 'Chính Đông', '离': 'Chính Nam', '兑': 'Chính Tây', '坎': 'Chính Bắc',
+            '正东': 'Chính Đông', '正南': 'Chính Nam', '正西': 'Chính Tây', '正北': 'Chính Bắc',
+            '东北': 'Đông Bắc', '东南': 'Đông Nam', '西北': 'Tây Bắc', '西南': 'Tây Nam'
+        };
+
+        const ANIMAL_MAP = {
+            '鼠': 'Tý (Chuột)', '牛': 'Sửu (Trâu)', '虎': 'Dần (Hổ)', '兔': 'Mão (Mèo)',
+            '龙': 'Thìn (Rồng)', '蛇': 'Tỵ (Rắn)', '马': 'Ngọ (Ngựa)', '羊': 'Mùi (Dê)',
+            '猴': 'Thân (Khỉ)', '鸡': 'Dậu (Gà)', '狗': 'Tuất (Chó)', '猪': 'Hợi (Lợn)'
+        };
+
+        const TIAN_GAN_MAP = {
+            '甲': 'Giáp', '乙': 'Ất', '丙': 'Bính', '丁': 'Đinh', '戊': 'Mậu',
+            '己': 'Kỷ', '庚': 'Canh', '辛': 'Tân', '壬': 'Nhâm', '癸': 'Quý'
+        };
+
+        const DI_CHI_MAP = {
+            '子': 'Tý', '丑': 'Sửu', '寅': 'Dần', '卯': 'Mão', '辰': 'Thìn', '巳': 'Tỵ',
+            '午': 'Ngọ', '未': 'Mùi', '申': 'Thân', '酉': 'Dậu', '戌': 'Tuất', '亥': 'Hợi'
+        };
+
+        const ALL_CHAR_MAP = {
+            '甲': 'Giáp ', '乙': 'Ất ', '丙': 'Bính ', '丁': 'Đinh ', '戊': 'Mậu ',
+            '己': 'Kỷ ', '庚': 'Canh ', '辛': 'Tân ', '壬': 'Nhâm ', '癸': 'Quý ',
+            '子': 'Tý', '丑': 'Sửu', '寅': 'Dần', '卯': 'Mão', '辰': 'Thìn', '巳': 'Tỵ',
+            '午': 'Ngọ', '未': 'Mùi', '申': 'Thân', '酉': 'Dậu', '戌': 'Tuất', '亥': 'Hợi',
+            '鼠': 'Chuột', '牛': 'Trâu', '虎': 'Hổ', '兔': 'Mèo', '龙': 'Rồng', '蛇': 'Rắn',
+            '马': 'Ngựa', '羊': 'Dê', '猴': 'Khỉ', '鸡': 'Gà', '狗': 'Chó', '猪': 'Lợn',
+            '黄道': 'Hoàng Đạo', '黑道': 'Hắc Đạo', '吉': 'Cát', '凶': 'Hung'
+        };
+
+        const NA_YIN_MAP = {
+            '海中金': { name: 'Hải Trung Kim', element: 'Kim' },
+            '炉中火': { name: 'Lô Trung Hỏa', element: 'Hỏa' },
+            '大林木': { name: 'Đại Lâm Mộc', element: 'Mộc' },
+            '路旁土': { name: 'Lộ Bàng Thổ', element: 'Thổ' },
+            '剑锋金': { name: 'Kiếm Phong Kim', element: 'Kim' },
+            '山头火': { name: 'Sơn Đầu Hỏa', element: 'Hỏa' },
+            '涧下水': { name: 'Giản Hạ Thủy', element: 'Thủy' },
+            '城头土': { name: 'Thành Đầu Thổ', element: 'Thổ' },
+            '白蜡金': { name: 'Bạch Lạp Kim', element: 'Kim' },
+            '杨柳木': { name: 'Dương Liễu Mộc', element: 'Mộc' },
+            '泉中水': { name: 'Tuyền Trung Thủy', element: 'Thủy' },
+            '屋上土': { name: 'Ốc Thượng Thổ', element: 'Thổ' },
+            '霹雳火': { name: 'Tích Lịch Hỏa', element: 'Hỏa' },
+            '松柏木': { name: 'Tùng Bách Mộc', element: 'Mộc' },
+            '长流水': { name: 'Trường Lưu Thủy', element: 'Thủy' },
+            '沙中金': { name: 'Sa Trung Kim', element: 'Kim' },
+            '山下火': { name: 'Sơn Hạ Hỏa', element: 'Hỏa' },
+            '平地木': { name: 'Bình Địa Mộc', element: 'Mộc' },
+            '壁上土': { name: 'Bích Thượng Thổ', element: 'Thổ' },
+            '金箔金': { name: 'Kim Bạch Kim', element: 'Kim' },
+            '佛灯火': { name: 'Phúc Đăng Hỏa', element: 'Hỏa' },
+            '天河水': { name: 'Thiên Hà Thủy', element: 'Thủy' },
+            '大驿土': { name: 'Đại Trạch Thổ', element: 'Thổ' },
+            '钗钏金': { name: 'Thoa Xuyến Kim', element: 'Kim' },
+            '桑柘木': { name: 'Tang Đố Mộc', element: 'Mộc' },
+            '大溪水': { name: 'Đại Khê Thủy', element: 'Thủy' },
+            '沙中土': { name: 'Sa Trung Thổ', element: 'Thổ' },
+            '天上火': { name: 'Thiên Thượng Hỏa', element: 'Hỏa' },
+            '石榴木': { name: 'Thạch Lựu Mộc', element: 'Mộc' },
+            '大海水': { name: 'Đại Hải Thủy', element: 'Thủy' }
+        };
+
+        function cleanChineseText(str) {
+            if (!str) return '';
+            let res = str;
+            for (let [cn, vn] of Object.entries(ALL_CHAR_MAP)) {
+                res = res.replaceAll(cn, vn);
+            }
+            return res.trim();
+        }
+
+        const LIUYAO_EXPLANATION = {
+            '大安': 'Đại An: Mọi việc bình an, hanh thông, đi xa tốt lành.',
+            '留连': 'Lưu Niên: Công việc mưu sự dễ trì hoãn, nên kiên nhẫn.',
+            '速喜': 'Tốc Hỷ: Tin vui & may mắn đến nhanh, thích hợp cầu tài.',
+            '赤口': 'Xích Khẩu: Đề phòng mâu thuẫn, cãi vã, va chạm.',
+            '小吉': 'Tiểu Cát: Có quý nhân phù trợ, mọi việc thuận lợi.',
+            '空亡': 'Không Vong: Vận khí trầm, nên tránh khởi công việc lớn.',
+            '先胜': 'Tiên Thắng: Buổi sáng may mắn cát lành, buổi chiều nên tĩnh.',
+            '先负': 'Tiên Phụ: Buổi sáng bất lợi, từ sau 12h trưa hanh thông.'
+        };
+
+        const SHEN_EXPLANATION = {
+            '青龙': 'Thanh Long (Hoàng Đạo): Cát lành nhất, trăm việc đều thuận.',
+            '明堂': 'Minh Đường (Hoàng Đạo): Quý nhân phù trợ, thăng tiến công danh.',
+            '天刑': 'Thiên Hình (Hắc Đạo): Đề phòng tranh chấp, kiện tụng.',
+            '朱雀': 'Chu Tước (Hắc Đạo): Đề phòng thị phi, khẩu tài.',
+            '金匮': 'Kim Quỹ (Hoàng Đạo): Tốt cho chốt hợp đồng, tích lũy tài lộc.',
+            '天德': 'Thiên Đức (Hoàng Đạo): Đức trời ban, hóa giải mọi điều xấu.',
+            '白虎': 'Bạch Hổ (Hắc Đạo): Đề phòng tai ương, va chạm.',
+            '玉堂': 'Ngọc Đường (Hoàng Đạo): Khai trương, học hành, thi cử tốt.',
+            '天牢': 'Thiên Lao (Hắc Đạo): Dễ bị vướng mắc, đình trệ.',
+            '玄武': 'Huyền Vũ (Hắc Đạo): Đề phòng trộm cắp, tổn thất.',
+            '司命': 'Tư Mệnh (Hoàng Đạo): Mọi việc hành sự đều được độ trì.',
+            '勾陈': 'Câu Trần (Hắc Đạo): Công việc chậm trễ, phát sinh phiền phức.'
+        };
+
+        function checkZhiRelation(dayZhi, birthZhi) {
+            if (dayZhi === birthZhi) {
+                // Kiểm tra 4 cặp Tự Hình: Dậu-Dậu, Thìn-Thìn, Ngọ-Ngọ, Hợi-Hợi
+                const tuHinhList = ['酉', '辰', '午', '亥'];
+                if (tuHinhList.includes(dayZhi)) {
+                    return { type: 'BAD', name: 'Tự Hình', desc: 'Tự Hình (Nên giữ sức, kiềm chế nhẫn nại)' };
+                }
+                return { type: 'GOOD', name: 'Đồng Chi', desc: 'Trợ lực đồng khí' };
+            }
+
+            const lucHop = [
+                ['子', '丑'], ['寅', '亥'], ['卯', '戌'],
+                ['辰', '酉'], ['巳', '申'], ['午', '未']
+            ];
+            for (let pair of lucHop) {
+                if ((pair[0] === dayZhi && pair[1] === birthZhi) || (pair[1] === dayZhi && pair[0] === birthZhi)) {
+                    return { type: 'VERY_GOOD', name: 'Lục Hợp', desc: 'Lục Hợp cát lành (Quý nhân trợ lực)' };
+                }
+            }
+
+            const tamHop = [
+                ['申', '子', '辰'], ['寅', '午', '戌'],
+                ['巳', '酉', '丑'], ['亥', '卯', '未']
+            ];
+            for (let group of tamHop) {
+                if (group.includes(dayZhi) && group.includes(birthZhi)) {
+                    return { type: 'VERY_GOOD', name: 'Tam Hợp', desc: 'Tam Hợp hanh thông (Mưu sự dễ thành)' };
+                }
+            }
+
+            const lucXung = [
+                ['子', '午'], ['丑', '未'], ['寅', '申'],
+                ['卯', '酉'], ['辰', '戌'], ['巳', '亥']
+            ];
+            for (let pair of lucXung) {
+                if ((pair[0] === dayZhi && pair[1] === birthZhi) || (pair[1] === dayZhi && pair[0] === birthZhi)) {
+                    return { type: 'BAD', name: 'Lục Xung', desc: 'Xung khắc tuổi gia chủ (Nên kiềm chế hòa nhã)' };
+                }
+            }
+
+            return { type: 'NEUTRAL', name: 'Bình Hòa', desc: 'Địa chi bình hòa' };
+        }
+
+        function checkElementRelation(dayElem, birthElem) {
+            if (!dayElem || !birthElem) return { type: 'NEUTRAL', text: 'Ngũ hành bình hòa' };
+            if (dayElem === birthElem) return { type: 'GOOD', text: `Đồng hòa ${dayElem} (Trợ lực mạnh mẽ)` };
+
+            const sinhMap = { 'Kim': 'Thủy', 'Thủy': 'Mộc', 'Mộc': 'Hỏa', 'Hỏa': 'Thổ', 'Thổ': 'Kim' };
+            const khacMap = { 'Kim': 'Mộc', 'Mộc': 'Thổ', 'Thổ': 'Thủy', 'Thủy': 'Hỏa', 'Hỏa': 'Kim' };
+
+            if (sinhMap[dayElem] === birthElem) {
+                return { type: 'VERY_GOOD', text: `Ngày ${dayElem} tương sinh Mệnh ${birthElem} (Vận khí cực tốt)` };
+            }
+            if (sinhMap[birthElem] === dayElem) {
+                return { type: 'GOOD', text: `Mệnh ${birthElem} sinh Ngày ${dayElem} (Xuất lực, thuận lợi)` };
+            }
+            if (khacMap[dayElem] === birthElem) {
+                return { type: 'BAD', text: `Ngày ${dayElem} khắc Mệnh ${birthElem} (Nên tĩnh, giữ sức)` };
+            }
+            if (khacMap[birthElem] === dayElem) {
+                return { type: 'NEUTRAL', text: `Mệnh ${birthElem} khắc Ngày ${dayElem} (Làm chủ tình thế)` };
+            }
+
+            return { type: 'NEUTRAL', text: 'Ngũ hành bình hòa' };
+        }
+
+        function updateFengShuiData() {
+            try {
+                const { Lunar, Solar } = require('./lunar.js');
+                const now = new Date();
+                const lunar = Lunar.fromDate(now);
+
+                const day = lunar.getDay();
+                const month = lunar.getMonth();
+                const year = lunar.getYear();
+                const canChiDayVn = cleanChineseText(lunar.getDayInGanZhi());
+
+                // 1. Cập nhật Main Bar trên Taskbar
+                const barDateEl = document.getElementById('bar-date');
+                const barStatusEl = document.getElementById('bar-status');
+
+                barDateEl.innerText = `Âm Lịch: ${day}/${month}/${year} (${canChiDayVn})`;
+
+                // Kiểm tra Mùng 1 / Rằm để đổi nền màu vàng đậm
+                const overlayBarEl = document.getElementById('bar');
+                let specialDayPrefix = '';
+                if (day === 1) {
+                    specialDayPrefix = '🌟 Mùng 1 - ';
+                    overlayBarEl.classList.add('is-special-day');
+                } else if (day === 15) {
+                    specialDayPrefix = '🌕 Ngày Rằm - ';
+                    overlayBarEl.classList.add('is-special-day');
+                } else {
+                    overlayBarEl.classList.remove('is-special-day');
+                }
+
+                // Cập nhật Ngày Hoàng Đạo / Hắc Đạo vào Popup
+                const dayTianShenType = lunar.getDayTianShenType();
+                const isGoodDay = (dayTianShenType === '黄道');
+                const popDayStatusEl = document.getElementById('pop-day-status');
+                if (popDayStatusEl) {
+                    if (isGoodDay) {
+                        popDayStatusEl.className = 'section-desc good';
+                        popDayStatusEl.innerText = 'Ngày Hoàng Đạo (Cát Lành) - Thích hợp mưu sự, khởi công, việc lớn.';
+                    } else {
+                        popDayStatusEl.className = 'section-desc bad';
+                        popDayStatusEl.innerText = 'Ngày Hắc Đạo (Hung) - Nên cẩn thận, hạn chế khởi công việc lớn.';
+                    }
+                }
+
+                // 2. ĐÁNH GIÁ TỬ VI CÁ NHÂN THEO NGÀY SINH GIA CHỦ (ĐƯA LÊN TAB OVERLAY)
+                if (USER_BIRTHDATE) {
+                    const [bY, bM, bD] = USER_BIRTHDATE.split('-').map(Number);
+                    const birthSolar = Solar.fromYmd(bY, bM, bD);
+                    const birthLunar = birthSolar.getLunar();
+
+                    const dayZhi = lunar.getDayZhi();
+                    const birthZhi = birthLunar.getYearZhi();
+                    const zhiRel = checkZhiRelation(dayZhi, birthZhi);
+
+                    const dayNaYinRaw = lunar.getDayNaYin();
+                    const dayNaYinInfo = NA_YIN_MAP[dayNaYinRaw] || { name: cleanChineseText(dayNaYinRaw), element: 'Khác' };
+                    const birthNaYinRaw = birthLunar.getYearNaYin();
+                    const birthNaYinInfo = NA_YIN_MAP[birthNaYinRaw] || { name: cleanChineseText(birthNaYinRaw), element: 'Khác' };
+                    const elemRel = checkElementRelation(dayNaYinInfo.element, birthNaYinInfo.element);
+
+                    const popPersonalEvalEl = document.getElementById('pop-personal-eval');
+
+                    let barStatusText = '';
+                    let barStatusClass = 'bar-status';
+                    let detailEvalClass = 'section-desc';
+                    let detailEvalText = '';
+
+                    if (zhiRel.type === 'VERY_GOOD' && elemRel.type === 'VERY_GOOD') {
+                        barStatusClass = 'bar-status status-good';
+                        barStatusText = `${specialDayPrefix}🌟 Rất Hợp Tuổi (Cát Khánh)`;
+                        detailEvalClass = 'section-desc good';
+                        detailEvalText = '🌟 RẤT HỢP TUỔI & TƯƠNG SINH - Cát lành, vận khí cực tốt, mưu sự dễ thành!';
+                    } else if (zhiRel.type === 'VERY_GOOD') {
+                        barStatusClass = 'bar-status status-good';
+                        barStatusText = `${specialDayPrefix}🌟 Hợp Tuổi (${zhiRel.name})`;
+                        detailEvalClass = 'section-desc good';
+                        detailEvalText = `🌟 HỢP TUỔI (${zhiRel.name}) - Ngày tốt, quý nhân trợ lực, mưu sự hanh thông.`;
+                    } else if (elemRel.type === 'VERY_GOOD') {
+                        barStatusClass = 'bar-status status-good';
+                        barStatusText = `${specialDayPrefix}🌟 Ngũ Hành Tương Sinh`;
+                        detailEvalClass = 'section-desc good';
+                        detailEvalText = '🌟 NGŨ HÀNH TƯƠNG SINH - Vận trình thuận lợi, công việc suôn sẻ.';
+                    } else if (zhiRel.type === 'BAD' || elemRel.type === 'BAD') {
+                        barStatusClass = 'bar-status status-bad';
+                        const reason = zhiRel.type === 'BAD' ? 'Xung Tuổi' : 'Tương Khắc';
+                        barStatusText = `${specialDayPrefix}⚠️ ${reason} (Cẩn Trọng)`;
+                        detailEvalClass = 'section-desc bad';
+                        detailEvalText = `⚠️ KHÔNG HỢP (${reason}) - Vận khí trầm, nên giữ sức, tránh tranh cãi.`;
+                    } else if (zhiRel.type === 'GOOD' || elemRel.type === 'GOOD') {
+                        barStatusClass = 'bar-status status-good';
+                        barStatusText = `${specialDayPrefix}✨ Hợp Tuổi (Khá Tốt)`;
+                        detailEvalClass = 'section-desc gold';
+                        detailEvalText = '✨ KHÁ TỐT (Có đồng khí trợ lực) - Mọi việc diễn ra suôn sẻ.';
+                    } else {
+                        barStatusClass = 'bar-status';
+                        barStatusText = `${specialDayPrefix}☯️ Bình Hòa Tuổi`;
+                        detailEvalClass = 'section-desc';
+                        detailEvalText = '☯️ BÌNH HÒA - Không xung không hợp, mọi việc an ổn.';
+                    }
+
+                    // Cập nhật Vận Hạn lên Thanh Tab Taskbar
+                    barStatusEl.className = barStatusClass;
+                    barStatusEl.innerText = barStatusText;
+
+                    // Cập nhật Chi tiết Vận Hạn trong Popup
+                    if (popPersonalEvalEl) {
+                        popPersonalEvalEl.className = detailEvalClass;
+                        popPersonalEvalEl.innerText = detailEvalText;
+                    }
+                }
+
+                // 3. Cập nhật Popup Chi tiết khi Hover
+                // Lục Diệu
+                const liuYaoRaw = lunar.getLiuYao();
+                const liuYaoDesc = LIUYAO_EXPLANATION[liuYaoRaw] || `Lục Diệu: ${cleanChineseText(liuYaoRaw)}`;
+                const popLiuYaoEl = document.getElementById('pop-liuyao');
+                popLiuYaoEl.innerText = liuYaoDesc;
+                popLiuYaoEl.className = liuYaoRaw.includes('安') || liuYaoRaw.includes('喜') || liuYaoRaw.includes('吉') ? 'section-desc good' : 'section-desc';
+
+                // Giờ Hiện Tại
+                const currentHour = now.getHours();
+                const times = lunar.getTimes();
+                let currentTianShenRaw = '';
+                let isHuangDaoHour = true;
+                let goodHoursList = [];
+
+                times.forEach(t => {
+                    const minH = parseInt(t.getMinHm().split(':')[0]);
+                    const maxH = parseInt(t.getMaxHm().split(':')[0]);
+                    const isCurrent = (currentHour >= minH && currentHour <= maxH) || (minH > maxH && (currentHour >= minH || currentHour <= maxH));
+
+                    const shenName = t.getTianShen();
+                    const isHuangDao = (t.getTianShenType() === '黄道');
+
+                    if (isCurrent) {
+                        currentTianShenRaw = shenName;
+                        isHuangDaoHour = isHuangDao;
+                    }
+
+                    if (isHuangDao) {
+                        const gz = t.getGanZhi();
+                        const hourChi = gz.length > 1 ? gz[1] : gz;
+                        const hourChiVn = DI_CHI_MAP[hourChi] || cleanChineseText(hourChi);
+                        goodHoursList.push(`${hourChiVn} (${t.getMinHm()})`);
+                    }
+                });
+
+                const popHourEl = document.getElementById('pop-hour');
+                const hourDesc = SHEN_EXPLANATION[currentTianShenRaw] || `Giờ ${cleanChineseText(currentTianShenRaw)}`;
+                popHourEl.innerText = hourDesc;
+                popHourEl.className = isHuangDaoHour ? 'section-desc good' : 'section-desc bad';
+
+                // Hướng Xuất Hành
+                const caiDir = DIRECTION_MAP[lunar.getDayPositionCaiDesc()] || cleanChineseText(lunar.getDayPositionCaiDesc());
+                const xiDir = DIRECTION_MAP[lunar.getDayPositionXiDesc()] || cleanChineseText(lunar.getDayPositionXiDesc());
+                const fuDir = DIRECTION_MAP[lunar.getDayPositionFuDesc()] || cleanChineseText(lunar.getDayPositionFuDesc());
+                document.getElementById('pop-direction').innerText = `Tài Thần: ${caiDir} | Hỷ Thần: ${xiDir} | Phúc Thần: ${fuDir}`;
+
+                // Tuổi Xung
+                const chongGanVn = TIAN_GAN_MAP[lunar.getDayChongGan()] || cleanChineseText(lunar.getDayChongGan());
+                const chongAnimalVn = ANIMAL_MAP[lunar.getDayChongShengXiao()] || cleanChineseText(lunar.getDayChongShengXiao());
+                document.getElementById('pop-chong').innerText = `Tuổi xung trong ngày: ${chongGanVn} ${chongAnimalVn} (Nên cẩn trọng hòa nhã)`;
+
+                // Các Giờ Hoàng Đạo
+                document.getElementById('pop-good-hours').innerText = goodHoursList.length > 0 ? goodHoursList.join(' • ') : 'Không có';
+
+            } catch (err) {
+                const barStatusEl = document.getElementById('bar-status');
+                if (barStatusEl) {
+                    barStatusEl.className = 'bar-status status-bad';
+                    barStatusEl.innerText = 'Lỗi: ' + err.message;
+                }
+            }
+        }
+
+        // Khởi chạy
+        updateFengShuiData();
+        setInterval(updateFengShuiData, 60000);
+    </script>
+</body>
+
+</html>
