@@ -39,6 +39,13 @@ function createWindow () {
 }
 
 app.whenReady().then(() => {
+  // Set up auto-launch on startup
+  app.setLoginItemSettings({
+    openAtLogin: true,
+    openAsHidden: true,
+    path: app.getPath('exe')
+  })
+
   createWindow()
   
   app.on('activate', () => {

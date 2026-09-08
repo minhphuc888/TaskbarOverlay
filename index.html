@@ -301,23 +301,25 @@
         /* Vỉ thuốc */
         .pill-container {
             display: flex;
+            flex-direction: column;
             align-items: center;
+            justify-content: center;
             margin-right: 8px;
             cursor: pointer;
             flex-shrink: 0;
-            gap: 4px;
+            gap: 2px;
         }
 
         .pill-item {
-            width: 24px;
-            height: 16px;
-            border-radius: 8px;
+            width: 32px;
+            height: 14px;
+            border-radius: 7px;
             background-color: #f1f5f9;
             border: 1px solid #cbd5e1;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 8.5px;
+            font-size: 8px;
             font-weight: 700;
             color: #64748b;
             transition: background-color 0.2s, color 0.2s, border-color 0.2s;
@@ -422,8 +424,8 @@
             </div>
 
             <div class="pill-container" title="Lịch uống thuốc">
-                <div class="pill-item" data-index="0" title="9:00 - Vitamin C"><span>9h</span></div>
-                <div class="pill-item" data-index="1" title="14:00 - Kẽm"><span>14h</span></div>
+                <div class="pill-item" data-index="0" title="9:00 - Vitamin C"><span>9:00</span></div>
+                <div class="pill-item" data-index="1" title="14:00 - Kẽm"><span>14:00</span></div>
             </div>
         </div>
     </div>
