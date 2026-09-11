@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Cài đặt & Lịch sử</title>
+    <link rel="stylesheet" href="settings.css">
+</head>
+<body>
+
+    <div class="tabs">
+        <div class="tab active" data-target="settings-tab">Cài đặt</div>
+        <div class="tab" data-target="history-tab">Lịch sử</div>
+    </div>
+
+    <div class="content">
+        <!-- TAB: SETTINGS -->
+        <div id="settings-tab" class="tab-content active">
+            <div class="card">
+                <!-- Giao diện / Hiển thị -->
+                <div class="setting-section">
+                    <div class="section-header">
+                        <div class="section-title">🖥️ Giao diện & Vị trí</div>
+                    </div>
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label class="form-label">Vị trí Tab trên Taskbar (Kéo để chỉnh)</label>
+                        <input type="range" id="tab-position-x" class="form-input" min="0" max="2000" value="0" style="padding: 0;">
+                    </div>
+                </div>
+
+                <hr class="divider">
+
+                <!-- Lịch Âm -->
+                <div class="setting-section">
+                    <div class="section-header">
+                        <div class="section-title">🔮 Lịch Âm & Phong Thuỷ</div>
+                        <label class="switch">
+                            <input type="checkbox" id="toggle-lunar">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div style="display: flex; gap: 16px;">
+                        <div class="form-group" style="flex:1; margin-bottom:0;">
+                            <label class="form-label">Tên người dùng</label>
+                            <input type="text" id="lunar-name" class="form-input" placeholder="VD: Gia Chủ">
+                        </div>
+                        <div class="form-group" style="flex:1; margin-bottom:0;">
+                            <label class="form-label">Ngày tháng năm sinh</label>
+                            <input type="date" id="lunar-dob" class="form-input">
+                        </div>
+                    </div>
+                </div>
+
+                <hr class="divider">
+
+                <!-- Uống Nước -->
+                <div class="setting-section">
+                    <div class="section-header">
+                        <div class="section-title">💧 Lịch Uống Nước</div>
+                        <label class="switch">
+                            <input type="checkbox" id="toggle-water">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div class="tag-list" id="water-times-list"></div>
+                    <div class="add-row">
+                        <input type="time" id="new-water-time" class="form-input" style="width: 120px;" value="12:00">
+                        <button class="btn btn-outline" onclick="addWaterTime()">+ Thêm giờ</button>
+                        <button class="btn btn-outline" onclick="resetWaterTimes()">Mặc định</button>
+                    </div>
+                </div>
+
+                <hr class="divider">
+
+                <!-- Uống Thuốc -->
+                <div class="setting-section">
+                    <div class="section-header">
+                        <div class="section-title">💊 Lịch Uống Thuốc / Vitamin</div>
+                        <label class="switch">
+                            <input type="checkbox" id="toggle-pill">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div class="tag-list" id="pill-items-list"></div>
+                    <div class="add-row">
+                        <input type="time" id="new-pill-time" class="form-input" style="width: 120px;" value="08:00">
+                        <input type="text" id="new-pill-name" class="form-input" style="flex: 1;" placeholder="Tên thuốc/Vitamin">
+                        <button class="btn btn-outline" onclick="addPillItem()">+ Thêm</button>
+                    </div>
+                </div>
+
+                <hr class="divider">
+
+                <!-- Cân Nặng -->
+                <div class="setting-section">
+                    <div class="section-header">
+                        <div class="section-title">⚖️ Lịch Đo Cân Nặng</div>
+                        <label class="switch">
+                            <input type="checkbox" id="toggle-weight">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div class="add-row">
+                        <input type="time" id="weight-time" class="form-input" style="width: 120px;" value="07:00">
+                        <select id="weight-repeat-type" class="form-input" style="width: 150px;">
+                            <option value="daily">Hàng ngày</option>
+                            <option value="weekly">Hàng tuần</option>
+                            <option value="monthly">Hàng tháng</option>
+                            <option value="yearly">Hàng năm</option>
+                        </select>
+                        <input type="text" id="weight-repeat-value" class="form-input" style="flex: 1;" placeholder="Giá trị (VD: 2 hoặc 15)">
+                    </div>
+                </div>
+
+                <hr class="divider">
+
+                <!-- Nhắc Nhở -->
+                <div class="setting-section">
+                    <div class="section-header">
+                        <div class="section-title">📝 Nhắc Nhở Tự Do</div>
+                        <label class="switch">
+                            <input type="checkbox" id="toggle-reminder">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div class="tag-list" id="reminder-items-list"></div>
+                    <div class="add-row">
+                        <input type="time" id="new-reminder-time" class="form-input" style="width: 110px;" value="08:00">
+                        <select id="new-reminder-repeat-type" class="form-input" style="width: 130px;">
+                            <option value="daily">Hàng ngày</option>
+                            <option value="hourly">Hàng giờ</option>
+                            <option value="weekly">Hàng tuần</option>
+                            <option value="monthly">Hàng tháng</option>
+                            <option value="yearly">Hàng năm</option>
+                        </select>
+                        <input type="text" id="new-reminder-repeat-value" class="form-input" style="width: 90px;" placeholder="C.kỳ/Giá trị">
+                        <input type="text" id="new-reminder-name" class="form-input" style="flex: 1;" placeholder="Nội dung">
+                        <button class="btn btn-outline" onclick="addReminderItem()">+ Thêm</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB: HISTORY -->
+        <div id="history-tab" class="tab-content">
+            <div class="card history-card">
+                <div class="history-title">Lịch sử Uống Nước</div>
+                <table class="history-table">
+                    <thead><tr><th>Ngày</th><th>Tiến độ</th><th>Hoàn thành</th></tr></thead>
+                    <tbody id="water-history-body"></tbody>
+                </table>
+            </div>
+
+            <div class="card history-card">
+                <div class="history-title">Lịch sử Uống Thuốc</div>
+                <table class="history-table">
+                    <thead><tr><th>Ngày</th><th>Tiến độ</th><th>Hoàn thành</th></tr></thead>
+                    <tbody id="pill-history-body"></tbody>
+                </table>
+            </div>
+
+            <div class="card history-card">
+                <div class="history-title">Lịch sử Cân Nặng</div>
+                <table class="history-table">
+                    <thead><tr><th>Ngày</th><th>Số kg</th></tr></thead>
+                    <tbody id="weight-history-body"></tbody>
+                </table>
+            </div>
+
+            <div class="card history-card">
+                <div class="history-title">Lịch sử Nhắc Nhở</div>
+                <table class="history-table">
+                    <thead><tr><th>Ngày</th><th>Tiến độ</th><th>Hoàn thành</th></tr></thead>
+                    <tbody id="reminder-history-body"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- FOOTER ACTIONS -->
+    <div class="footer">
+        <div style="font-size: 13px; color: #94a3b8; font-weight: 500;">
+            v1.0.0 &copy; Nguyễn Minh Phúc
+        </div>
+        <div style="display: flex; gap: 12px;">
+            <button class="btn btn-outline" onclick="window.close()">Hủy</button>
+            <button class="btn btn-primary" onclick="saveConfig()">Lưu cài đặt</button>
+        </div>
+    </div>
+
+    <script src="settings.js"></script>
+</body>
+</html>
+

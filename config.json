@@ -1,0 +1,32 @@
+{
+    "lunar": {
+        "enabled": true,
+        "userName": "Gia chủ",
+        "birthDate": "1993-04-10"
+    },
+    "water": {
+        "enabled": true,
+        "times": [
+            "08:30",
+            "09:30",
+            "10:30",
+            "14:00",
+            "15:00",
+            "16:00",
+            "17:00"
+        ]
+    },
+    "pill": {
+        "enabled": true,
+        "items": [
+            {
+                "time": "09:00",
+                "name": "Vitamin C"
+            },
+            {
+                "time": "14:00",
+                "name": "Kẽm"
+            }
+        ]
+    }
+}
